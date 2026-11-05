@@ -1,0 +1,53 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# 环境变量（不得提交真实配置）
+.env
+.env.*
+# 环境变量模板可提交（项目当前无 .env.example，此规则为将来预留）
+!.env.example
+
+# Vercel 本地关联目录（含 projectId / orgId，不提交）
+.vercel/
+
+# 测试覆盖率与缓存
+coverage/
+.vitest/
+
+# TypeScript 增量编译产物
+*.tsbuildinfo
+
+# 真题资料整理过程快照与中间数据（本地保留，不进入仓库）
+exam_fix/backup/
+
+# 真题整理全过程目录（报告/中间数据/备份，全部仅本地保留，不进入仓库）
+exam_fix/
+
+# Vite 模板自带静态资源（项目未引用，本地保留但不纳入仓库）
+src/assets/hero.png
+src/assets/vite.svg
+
+# Supabase 云端方案设计文档（项目为纯本地版，方案未实施，仅本地留档）
+supabase/数据库设计方案.md
