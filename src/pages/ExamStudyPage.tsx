@@ -150,6 +150,30 @@ export function applySubmitResult(
 }
 
 /**
+ * 提交成功后推进视图状态（纯函数，供页面与测试共用）：
+ * - 更新答案表与已答题数
+ * - **同步重算 allAnswered**：答完最后一题必须立刻为 true，否则结束会话不会被触发
+ *   （与 QuizStudyPage.advanceAfterSubmit 同款修复，回归：真题完成态缺陷）
+ */
+export function advanceAfterSubmit(
+  view: StudyView,
+  question: ExamQuestion,
+  userAnswer: string,
+  status: "accepted" | "already-submitted",
+  isCorrect: boolean,
+): StudyView {
+  const already = view.answers.has(question.id);
+  const answers = applySubmitResult(view.answers, question, userAnswer, status, isCorrect);
+  const answeredCount = already ? view.answeredCount : view.answeredCount + 1;
+  return {
+    ...view,
+    answers,
+    answeredCount,
+    allAnswered: answeredCount === view.total && view.total > 0,
+  };
+}
+
+/**
  * 请求世代守卫（3c.1）：用于判断异步响应是否仍属于当前有效请求。
  * 用法：发起前 `const seq = guard.begin()`，响应后 `if (!guard.isCurrent(seq)) return;`
  */
@@ -317,17 +341,10 @@ export default function ExamStudyPage() {
         submittedAt,
         durationMs,
       });
-      // 记录已成功写入数据库：先按 questionId 更新答案表（与当前展示的题目无关）
+      // 记录已成功写入数据库：先按 questionId 更新答案表（与当前展示的题目无关），
+      // 并同步重算 allAnswered（答完最后一题立刻触发结束会话）
       setView((prev) =>
-        prev
-          ? {
-              ...prev,
-              answers: applySubmitResult(prev.answers, current, letter, res.status, res.isCorrect),
-              answeredCount: prev.answers.has(current.id)
-                ? prev.answeredCount
-                : prev.answeredCount + 1,
-            }
-          : prev,
+        prev ? advanceAfterSubmit(prev, current, letter, res.status, res.isCorrect) : prev,
       );
 
       // 反馈按 questionId 归属（3c.1）：旧题反馈不会显示在新题下

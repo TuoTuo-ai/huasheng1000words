@@ -6,6 +6,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { IDBFactory } from "fake-indexeddb";
 import {
+  advanceAfterSubmit,
   applySubmitResult,
   buildStudyView,
   canGoNext,
@@ -338,5 +339,88 @@ describe("页面结构与隔离（静态断言）", () => {
     for (const banned of ["studyService", "fsrs", "wordRepository", "quizRepository", "quiz_questions"]) {
       expect(src).not.toContain(banned);
     }
+  });
+});
+
+/* ==================== 回归：答完最后一题必须立即触发完成态 ====================
+ * 缺陷背景：ExamStudyPage.handleSelect 增量更新 answers/answeredCount 但未重算
+ * allAnswered，导致 finishExamSession 不触发、完成态不出现（刷新才恢复）。
+ * 修复：与 QuizStudyPage.advanceAfterSubmit 同款纯函数，同步重算 allAnswered。
+ */
+describe("回归：真题完成态（advanceAfterSubmit 同步重算 allAnswered）", () => {
+  it("未答完时 allAnswered 保持 false（不得提前进入完成态）", async () => {
+    const s = await newSession([q1, q2]);
+    let view = buildStudyView((await getExamSessionResult(s.trainingId))!);
+    expect(view.allAnswered).toBe(false);
+    const r1 = await submitExamAnswer(s.trainingId, q1, q1.answer, {
+      submittedAt: Date.now(),
+      durationMs: 100,
+    });
+    view = advanceAfterSubmit(view, q1, q1.answer, r1.status, r1.isCorrect);
+    expect(view.answeredCount).toBe(1);
+    expect(view.allAnswered).toBe(false);
+    // 未答完时服务层拒绝结束会话
+    await expect(finishExamSession(s.trainingId)).rejects.toThrow(/未答完/);
+    const stored = (await getExamSessionResult(s.trainingId))!;
+    expect(stored.finished).toBe(false);
+  });
+
+  it("答完最后一题后 allAnswered 立刻为 true（缺陷回归点）", async () => {
+    const s = await newSession([q1, q2]);
+    let view = buildStudyView((await getExamSessionResult(s.trainingId))!);
+    const r1 = await submitExamAnswer(s.trainingId, q1, q1.answer, {
+      submittedAt: Date.now(),
+      durationMs: 100,
+    });
+    view = advanceAfterSubmit(view, q1, q1.answer, r1.status, r1.isCorrect);
+    const r2 = await submitExamAnswer(s.trainingId, q2, q2.answer, {
+      submittedAt: Date.now(),
+      durationMs: 100,
+    });
+    view = advanceAfterSubmit(view, q2, q2.answer, r2.status, r2.isCorrect);
+    expect(view.answeredCount).toBe(2);
+    expect(view.allAnswered).toBe(true); // 必须立刻为 true，否则结束会话不会被触发
+    // already-submitted 重放不得改变 allAnswered 与计数
+    const replay = advanceAfterSubmit(view, q2, q2.answer, "already-submitted", r2.isCorrect);
+    expect(replay.allAnswered).toBe(true);
+    expect(replay.answeredCount).toBe(2);
+  });
+
+  it("finishExamSession 幂等：重复调用只保留第一次的 finishedAt", async () => {
+    const s = await newSession([q1]);
+    await submitExamAnswer(s.trainingId, q1, q1.answer, {
+      submittedAt: Date.now(),
+      durationMs: 100,
+    });
+    const fin1 = await finishExamSession(s.trainingId, 1_000);
+    const fin2 = await finishExamSession(s.trainingId, 9_999);
+    expect(fin1.finishedAt).toBe(1_000);
+    expect(fin2.finishedAt).toBe(1_000);
+  });
+
+  it("端到端：全部答完 → finish 写入 finishedAt → 刷新（重新加载视图）后完成状态仍正确", async () => {
+    const s = await newSession([q1, q2]);
+    let view = buildStudyView((await getExamSessionResult(s.trainingId))!);
+    for (const q of [q1, q2]) {
+      const r = await submitExamAnswer(s.trainingId, q, q.answer, {
+        submittedAt: Date.now(),
+        durationMs: 100,
+      });
+      view = advanceAfterSubmit(view, q, q.answer, r.status, r.isCorrect);
+    }
+    expect(view.allAnswered).toBe(true);
+    const finished = await finishExamSession(s.trainingId);
+    expect(finished.finishedAt).toBeDefined();
+    // 模拟刷新：重新 getExamSessionResult + buildStudyView
+    const fresh = buildStudyView((await getExamSessionResult(s.trainingId))!);
+    expect(fresh.allAnswered).toBe(true);
+    expect(fresh.finished).toBe(true);
+  });
+
+  it("页面源码：handleSelect 使用 advanceAfterSubmit（不再手工增量拼装视图）", async () => {
+    const src = (await import("@/pages/ExamStudyPage.tsx?raw")).default as string;
+    expect(src).toContain("advanceAfterSubmit");
+    // 增量更新必须经由纯函数，避免遗漏 allAnswered 重算
+    expect(src).not.toContain("answeredCount: prev.answers.has");
   });
 });
