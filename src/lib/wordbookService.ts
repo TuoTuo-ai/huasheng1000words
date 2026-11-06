@@ -4,6 +4,7 @@
  */
 import type { Word, WordProgress, ReviewLog } from "@/types";
 import { getDB } from "@/db/database";
+import { compareWords } from "@/db/wordRepository";
 
 /** 词语分类（与 FSRS state 对应） */
 export type WordCategory = "all" | "new" | "learning" | "reviewing" | "relearning";
@@ -44,8 +45,9 @@ export async function getWordbook(): Promise<{
   stats: WordbookStats;
 }> {
   const db = await getDB();
+  // 按统一学习顺序（sortOrder）展示，与学习队列一致；不再依赖 by-createdAt 索引
   const [words, progressList] = await Promise.all([
-    db.getAllFromIndex("words", "by-createdAt"),
+    db.getAll("words").then((ws) => ws.sort(compareWords)),
     db.getAll("progress"),
   ]);
   const progressMap = new Map(progressList.map((p) => [p.wordId, p]));

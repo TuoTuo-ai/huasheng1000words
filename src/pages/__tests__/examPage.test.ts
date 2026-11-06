@@ -218,11 +218,11 @@ describe("数据隔离：组卷预览不创建会话、不写记录", () => {
     expect(await db.getAll("training_records")).toEqual([]);
   });
 
-  it("组卷不写入 quiz_questions，且 DB_VERSION 仍为 2", async () => {
+  it("组卷不写入 quiz_questions，且 DB_VERSION 为 3", async () => {
     await generatePaper({ ...DEFAULT_PAPER_OPTIONS }, okFetch());
     const db = await getDB();
     expect(await db.getAll("quiz_questions")).toEqual([]);
-    expect(DB_VERSION).toBe(2);
+    expect(DB_VERSION).toBe(3);
   });
 });
 

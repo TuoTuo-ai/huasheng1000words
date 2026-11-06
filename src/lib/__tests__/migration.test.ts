@@ -102,16 +102,18 @@ describe("v1 → v2 迁移", () => {
     await v1.add("logs", { wordId: "w_1", grade: 1, reviewedAt: 200, wasNew: false, stateAfter: 3, scheduledDays: 0 });
     v1.close();
 
-    // 2) 通过应用代码打开（触发 upgrade 到 v2）
+    // 2) 通过应用代码打开（触发 upgrade 到 v3）
     const db = await getDB();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     expect(Array.from(db.objectStoreNames)).toContain("quiz_questions");
     expect(Array.from(db.objectStoreNames)).toContain("training_records");
     expect(Array.from(db.objectStoreNames)).toContain("training_sessions");
 
     // 3) 原有数据逐条比对
     const words = await db.getAll("words");
-    expect(words).toEqual([w1, w2]);
+    // v3 迁移会为已有词回填 sortOrder，其余字段必须逐项不变
+    expect(words.map(({ sortOrder, ...rest }) => rest)).toEqual([w1, w2]);
+    expect(words.map((w) => w.sortOrder).sort()).toEqual([0, 1]);
     const p = await db.get("progress", "w_1");
     expect(p!.stability).toBe(2.5);
     expect(p!.reps).toBe(3);
@@ -130,7 +132,7 @@ describe("v1 → v2 迁移", () => {
     await resetDBForTest();
     const after = await getAllWords();
     expect(after.length).toBe(before.length);
-    expect((await getDB()).version).toBe(2);
+    expect((await getDB()).version).toBe(3);
   });
 });
 

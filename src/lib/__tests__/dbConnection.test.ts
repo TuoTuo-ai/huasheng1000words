@@ -94,8 +94,8 @@ describe("多标签页 · 版本变化处理", () => {
     legacy.close();
   }, 30_000);
 
-  it("DB_VERSION 仍为 2，六个 Store 与索引定义未变", async () => {
-    expect(DB_VERSION).toBe(2);
+  it("DB_VERSION 为 3（v3 仅新增 sortOrder 字段，Store 与索引定义未变）", async () => {
+    expect(DB_VERSION).toBe(3);
     expect([...DB_STORE_NAMES]).toEqual([
       "words",
       "progress",
@@ -106,7 +106,7 @@ describe("多标签页 · 版本变化处理", () => {
     ]);
 
     const db = await getDB();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     for (const name of DB_STORE_NAMES) {
       expect(db.objectStoreNames.contains(name)).toBe(true);
     }

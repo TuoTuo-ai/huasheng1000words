@@ -16,6 +16,7 @@ import {
   getAllWords,
 } from "@/db/wordRepository";
 import { loadSettings } from "@/lib/settings";
+import { TEST_WORD_SOURCE } from "@/db/wordRepository";
 import {
   cardFromProgress,
   reviewCard,
@@ -137,7 +138,12 @@ export function needsReview(progress: WordProgress): boolean {
   return progress.state !== 0 && isDue(progress);
 }
 
-/** 确保测试词库存在（仅当词库为空时写入；正式词库导入后不再混入测试词） */
+/**
+ * 确保测试词库存在（仅当词库为空时写入）。
+ * 测试词一律不带 sortOrder（排序时按 Infinity 排到最后），
+ * 因此正式词库导入后它们绝不会排在新词队列前面；
+ * 导入时还会被 removeLeftoverTestWords 清理（见 importService）。
+ */
 export async function ensureTestWords(): Promise<void> {
   const existing = await getAllWords();
   if (existing.length > 0) return; // 词库非空，不写入测试词
@@ -147,37 +153,37 @@ export async function ensureTestWords(): Promise<void> {
       definition:
         "刊：削改，修订。不可改动或不可磨灭的言论，形容文章或言辞精准得当，无懈可击。",
       example: "这篇社论逻辑严密，堪称不刊之论。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
     {
       term: "首当其冲",
       definition: "最先受到攻击或遭受灾难，并非「首先冲在前面」。",
       example: "洪水来袭时，下游的村庄首当其冲。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
     {
       term: "差强人意",
       definition: "大体上还能使人满意（差：稍微），并非「不能令人满意」。",
       example: "这次考试成绩差强人意，还有提升空间。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
     {
       term: "文不加点",
       definition: "写文章一气呵成，无须修改（点：涂改），形容文思敏捷。",
       example: "他文不加点，一挥而就。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
     {
       term: "空穴来风",
       definition: "现多指消息和传说毫无根据；本义为「有根据、事出有因」。",
       example: "传闻并非空穴来风，董事会确实在商讨重组。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
     {
       term: "目无全牛",
       definition: "技艺达到极纯熟的境地，并非「没有全局观念」。",
       example: "三十年经验的老技师操作起来目无全牛。",
-      source: "测试词库",
+      source: TEST_WORD_SOURCE,
     },
   ];
   await Promise.all(testWords.map((w) => addWord(w)));

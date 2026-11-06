@@ -248,6 +248,8 @@ const WORD_RULES: FieldRule[] = [
   { key: "examples", required: false, type: "array" },
   { key: "aiCollocations", required: false, type: "array" },
   { key: "categoryEntries", required: false, type: "array" },
+  /* 学习顺序（v3 新增）：旧备份不含此字段，恢复后按 createdAt 兜底，不报错 */
+  { key: "sortOrder", required: false, type: "number" },
 ];
 
 const PROGRESS_RULES: FieldRule[] = [

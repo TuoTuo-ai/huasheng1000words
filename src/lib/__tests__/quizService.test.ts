@@ -705,7 +705,7 @@ describe("数据隔离", () => {
 
   it("DB_VERSION 与六表结构未变", async () => {
     const db = await getDB();
-    expect(db.version).toBe(2);
+    expect(db.version).toBe(3);
     expect([...db.objectStoreNames].sort()).toEqual(
       ["logs", "progress", "quiz_questions", "training_records", "training_sessions", "words"].sort(),
     );

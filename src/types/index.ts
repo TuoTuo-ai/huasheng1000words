@@ -34,6 +34,12 @@ export interface Word {
   /** 来源（如：2023年国考真题） */
   source?: string;
   createdAt: number;
+  /**
+   * 学习顺序（越小越先学）：
+   * - 正式词库导入时按 JSON 数组原始下标写入，保证 990 个唯一词顺序唯一且确定
+   * - 旧数据 / 非正式词库无此字段时按 Infinity 处理（排在正式词之后，再按 createdAt 兜底）
+   */
+  sortOrder?: number;
 
   /* —— 以下为正式词库扩展字段（均可选，旧数据不含也合法） —— */
 
